@@ -34,8 +34,8 @@ export default function TeamSelector({ players, currentPlayer, onSelect, isLoadi
   };
   
   return (
-    <div className="game-card p-6">
-      <h3 className="text-lg font-bold mb-2 text-center">Select Your Position</h3>
+    <div className="game-card p-4 md:p-6">
+      <h3 className="text-base md:text-lg font-bold mb-2 text-center">Select Your Position</h3>
       <p className="text-white/50 text-sm text-center mb-6">
         {hasSelected ? 'Click another position to switch' : 'Choose a team and role'}
       </p>
@@ -44,7 +44,7 @@ export default function TeamSelector({ players, currentPlayer, onSelect, isLoadi
         {/* Blue Team */}
         <div>
           <div className="text-center mb-3">
-            <span className="text-blue-400 font-bold text-lg">🔵 Blue Team</span>
+            <span className="text-blue-400 font-bold text-base md:text-lg">🔵 Blue Team</span>
           </div>
           
           <div className="space-y-2">
@@ -74,7 +74,7 @@ export default function TeamSelector({ players, currentPlayer, onSelect, isLoadi
         {/* Red Team */}
         <div>
           <div className="text-center mb-3">
-            <span className="text-red-400 font-bold text-lg">🔴 Red Team</span>
+            <span className="text-red-400 font-bold text-base md:text-lg">🔴 Red Team</span>
           </div>
           
           <div className="space-y-2">
@@ -140,7 +140,7 @@ function PositionButton({ team, role, icon, label, isTaken, isSelected, isLoadin
       onClick={onClick}
       disabled={isTaken || isLoading}
       className={cn(
-        'w-full p-3 rounded-xl flex items-center gap-3 transition-all',
+        'w-full p-2 md:p-3 rounded-xl flex items-center gap-2 md:gap-3 transition-all',
         'border-2 font-semibold',
         // Selected state
         isSelected && isBlue && 'bg-blue-500/30 border-blue-400 text-blue-200',
@@ -155,7 +155,7 @@ function PositionButton({ team, role, icon, label, isTaken, isSelected, isLoadin
       )}
     >
       <div className={cn(
-        'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+        'w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0',
         isSelected && isBlue && 'bg-blue-500/30',
         isSelected && !isBlue && 'bg-red-500/30',
         !isSelected && !isTaken && isBlue && 'bg-blue-500/20',
@@ -171,8 +171,8 @@ function PositionButton({ team, role, icon, label, isTaken, isSelected, isLoadin
         )}
       </div>
       <div className="flex-1 text-left">
-        <div className="font-semibold">{label}</div>
-        <div className="text-xs opacity-60">
+        <div className="font-semibold text-sm md:text-base">{label}</div>
+        <div className="text-[10px] md:text-xs opacity-60">
           {isTaken ? 'Taken' : isSelected ? 'Selected' : 'Available'}
         </div>
       </div>

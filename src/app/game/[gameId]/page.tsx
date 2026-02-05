@@ -308,7 +308,7 @@ export default function GamePage() {
                 onClick={handleStartGame}
                 disabled={!canStart || isLoading}
                 className={cn(
-                  'relative overflow-hidden group',
+                  'hidden md:block relative overflow-hidden group',
                   'bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500',
                   'text-white font-bold py-2 px-5 rounded-xl shadow-lg hover:shadow-emerald-500/25',
                   'transform transition-all duration-200 active:scale-95',
@@ -334,7 +334,7 @@ export default function GamePage() {
             )}
           </div>
         )}
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto pt-16 md:pt-0">
           {/* Header */}
           <div className="text-center mb-8 animate-bounce-in">
             <h1 className="game-title text-4xl md:text-5xl mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-red-400 text-transparent bg-clip-text">
@@ -349,6 +349,34 @@ export default function GamePage() {
                   </span>
               )}
             </p>
+
+            {/* Mobile Start Game Button */}
+            {currentPlayer && isAdmin && !isGamePlaying && (
+              <button
+                onClick={handleStartGame}
+                disabled={!canStart || isLoading}
+                className={cn(
+                  'md:hidden relative overflow-hidden group w-full max-w-xs mx-auto mt-6',
+                  'bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500',
+                  'text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-emerald-500/25',
+                  'transform transition-all duration-200 active:scale-95',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none',
+                  'border border-emerald-400/20 text-base flex items-center justify-center gap-2'
+                )}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>STARTING GAME...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-5 w-5 fill-current" />
+                    <span className="tracking-wider">START GAME</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
           
           {/* Share Link */}
