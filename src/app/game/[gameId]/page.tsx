@@ -30,6 +30,7 @@ export default function GamePage() {
   const gameId = params.gameId as string;
   const { play } = useSound();
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
+  const [showWinnerModal, setShowWinnerModal] = useState(true);
   
   const {
     game,
@@ -267,19 +268,6 @@ export default function GamePage() {
     );
   }
   
-  // Winner/Game Over Modal
-  if (game.status === 'finished') {
-    return (
-      <WinnerModal 
-        game={game}
-        onGoHome={async () => {
-          await leaveGame();
-          router.push('/');
-        }}
-      />
-    );
-  }
-  
   // Waiting/Selection phase (Lobby) OR Playing phase but user unassigned
   if ((game.status === 'waiting' || game.status === 'selecting') || 
       (game.status === 'playing' && currentPlayer && (!currentPlayer.team || !currentPlayer.role))) {
@@ -301,18 +289,49 @@ export default function GamePage() {
           <span className="hidden sm:inline">Leave</span>
         </button>
 
-        {/* Current User Avatar (Top Right) */}
+        {/* Current User Avatar + Start Game (Top Right) */}
         {currentPlayer && (
-          <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50 flex items-center gap-2 animate-bounce-in">
-            <span className="text-sm font-bold text-white/80 hidden sm:block">{currentPlayer.username}</span>
-            <Image
-              src={getAvatarUrl(currentPlayer.odId)}
-              alt={currentPlayer.username}
-              width={40}
-              height={40}
-              unoptimized
-              className="w-10 h-10 rounded-full bg-black/30 ring-2 ring-white/20 shadow-lg"
-            />
+          <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50 flex flex-col items-end gap-2 animate-bounce-in">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white/80 hidden sm:block">{currentPlayer.username}</span>
+              <Image
+                src={getAvatarUrl(currentPlayer.odId)}
+                alt={currentPlayer.username}
+                width={40}
+                height={40}
+                unoptimized
+                className="w-10 h-10 rounded-full bg-black/30 ring-2 ring-white/20 shadow-lg"
+              />
+            </div>
+            {isAdmin && !isGamePlaying && (
+              <button
+                onClick={handleStartGame}
+                disabled={!canStart || isLoading}
+                className={cn(
+                  'relative overflow-hidden group',
+                  'bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500',
+                  'text-white font-bold py-2 px-5 rounded-xl shadow-lg hover:shadow-emerald-500/25',
+                  'transform transition-all duration-200 active:scale-95',
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none',
+                  'border border-emerald-400/20 text-sm'
+                )}
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-xl" />
+                <div className="relative flex items-center gap-2">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>STARTING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 fill-current" />
+                      <span className="tracking-wider">START GAME</span>
+                    </>
+                  )}
+                </div>
+              </button>
+            )}
           </div>
         )}
         <div className="max-w-4xl mx-auto">
@@ -322,38 +341,6 @@ export default function GamePage() {
               {isGamePlaying ? 'JOIN GAME IN PROGRESS' : 'GAME LOBBY'}
             </h1>
             
-            {/* Start Game Button (Top Right Absolute or Flex) */}
-            {isAdmin && !isGamePlaying && (
-              <div className="md:absolute md:top-8 md:right-8 mt-4 md:mt-0 flex justify-center">
-                 <button
-                  onClick={handleStartGame}
-                  disabled={!canStart || isLoading}
-                  className={cn(
-                    'relative overflow-hidden group',
-                    'bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500',
-                    'text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-emerald-500/25',
-                    'transform transition-all duration-200 active:scale-95',
-                    'disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none',
-                    'border border-emerald-400/20'
-                  )}
-                >
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-xl" />
-                  <div className="relative flex items-center gap-2">
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>STARTING...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-5 w-5 fill-current" />
-                        <span className="tracking-wider">START GAME</span>
-                      </>
-                    )}
-                  </div>
-                </button>
-              </div>
-            )}
             <p className="text-white/50 relative z-10">
               {isGamePlaying ? 'Select an available position to join the game' : 'Waiting for players to join and select positions'}
               {!isGamePlaying && isAdmin && !canStart && (
@@ -512,7 +499,15 @@ export default function GamePage() {
         {/* Admin End Game Button (Absolute Top Right) */}
         {/* Game Menu (Top Right) */}
         <div className="absolute top-2 right-2 md:top-4 md:right-4 z-50">
-          <GameMenu isAdmin={!!isAdmin} onEndGame={handleEndGameClick} />
+          <GameMenu
+            isAdmin={!!isAdmin}
+            onEndGame={handleEndGameClick}
+            gameFinished={game.status === 'finished'}
+            onLeaveGame={async () => {
+              await leaveGame();
+              router.push('/');
+            }}
+          />
         </div>
 
         <ConfirmationModal
@@ -607,10 +602,14 @@ export default function GamePage() {
       </div>
       
       {/* Winner Modal */}
-      {game.winner && (
+      {game.status === 'finished' && showWinnerModal && (
         <WinnerModal
           game={game}
-          onGoHome={() => router.push('/')}
+          onGoHome={async () => {
+            await leaveGame();
+            router.push('/');
+          }}
+          onClose={() => setShowWinnerModal(false)}
         />
       )}
     </div>

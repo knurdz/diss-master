@@ -2,16 +2,17 @@
 
 import { Game } from '@/types/game';
 import { cn } from '@/lib/utils';
-import { Trophy, Home, PartyPopper, Skull } from 'lucide-react';
+import { Trophy, Home, PartyPopper, Skull, Eye } from 'lucide-react';
 
 interface WinnerModalProps {
   game: Game;
   onGoHome: () => void;
+  onClose?: () => void;
 }
 
 import { useSound } from '@/hooks/useSound';
 
-export default function WinnerModal({ game, onGoHome }: WinnerModalProps) {
+export default function WinnerModal({ game, onGoHome, onClose }: WinnerModalProps) {
   const { play } = useSound();
   const { winner } = game;
   const isBlueWinner = winner === 'blue';
@@ -128,14 +129,28 @@ export default function WinnerModal({ game, onGoHome }: WinnerModalProps) {
           </div>
         </div>
         
-        {/* Action Button */}
-        <button
-          onClick={handleGoHome}
-          className="game-btn game-btn-green w-full max-w-xs mx-auto flex items-center justify-center gap-2"
-        >
-          <Home className="w-5 h-5" />
-          <span>Play Again</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 max-w-xs mx-auto w-full">
+          {onClose && (
+            <button
+              onClick={() => {
+                play('button');
+                onClose();
+              }}
+              className="game-btn w-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-2"
+            >
+              <Eye className="w-5 h-5" />
+              <span>View Board</span>
+            </button>
+          )}
+          <button
+            onClick={handleGoHome}
+            className="game-btn game-btn-green w-full flex items-center justify-center gap-2"
+          >
+            <Home className="w-5 h-5" />
+            <span>Play Again</span>
+          </button>
+        </div>
       </div>
     </div>
   );
