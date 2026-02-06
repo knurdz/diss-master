@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { cn } from '@/lib/utils';
-import { Gamepad2, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Gamepad2, Loader2, ArrowLeft, ArrowRight, BookOpen, Info } from 'lucide-react';
 
 export default function JoinPage() {
   const params = useParams();
@@ -37,6 +37,24 @@ export default function JoinPage() {
   
   return (
     <div className="min-h-screen animated-bg flex items-center justify-center p-4">
+      {/* Top Navigation Links */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+        <a
+          href="/rules"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          Rules
+        </a>
+        <a
+          href="/about"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+        >
+          <Info className="w-3.5 h-3.5" />
+          About
+        </a>
+      </div>
+
       {/* Floating decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-float" />

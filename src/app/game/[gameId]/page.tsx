@@ -14,7 +14,7 @@ import WinnerModal from '@/components/WinnerModal';
 import GameLogPanel from '@/components/GameLogPanel';
 import { canStartGame, getTeamScore, getTeamTargetScore } from '@/lib/gameLogic';
 import { cn } from '@/lib/utils';
-import { Users, Play, Loader2, ArrowLeft, Crown, Gamepad2 } from 'lucide-react';
+import { Users, Play, Loader2, ArrowLeft, Crown, Gamepad2, BookOpen, Info, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 
 import { useSound } from '@/hooks/useSound';
@@ -31,6 +31,7 @@ export default function GamePage() {
   const { play } = useSound();
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(true);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   
   const {
     game,
@@ -197,7 +198,23 @@ export default function GamePage() {
   // Loading state
   if (!game) {
     return (
-      <div className="min-h-screen animated-bg flex items-center justify-center">
+      <div className="min-h-screen animated-bg flex items-center justify-center">        {/* Top Navigation Links */}
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+          <a
+            href="/rules"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Rules
+          </a>
+          <a
+            href="/about"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+          >
+            <Info className="w-3.5 h-3.5" />
+            About
+          </a>
+        </div>
         <div className="text-center animate-bounce-in">
           <Gamepad2 className="w-16 h-16 mx-auto mb-4 text-blue-400 animate-float" />
           <p className="text-white/70 text-lg">Loading game...</p>
@@ -210,6 +227,24 @@ export default function GamePage() {
   if (showUsernamePrompt && !currentPlayer) {
     return (
       <div className="min-h-screen animated-bg flex items-center justify-center p-4">
+        {/* Top Navigation Links */}
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+          <a
+            href="/rules"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Rules
+          </a>
+          <a
+            href="/about"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+          >
+            <Info className="w-3.5 h-3.5" />
+            About
+          </a>
+        </div>
+
         <div className="game-card p-8 w-full max-w-md animate-bounce-in">
           <div className="text-center mb-6">
             <Gamepad2 className="w-12 h-12 mx-auto mb-3 text-blue-400" />
@@ -289,11 +324,26 @@ export default function GamePage() {
           <span className="hidden sm:inline">Leave</span>
         </button>
 
-        {/* Current User Avatar + Start Game (Top Right) */}
+        {/* Top Right Navigation - Desktop */}
         {currentPlayer && (
-          <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50 flex flex-col items-end gap-2 animate-bounce-in">
+          <div className="hidden md:flex absolute top-4 right-4 md:top-8 md:right-8 z-50 items-center gap-3 animate-bounce-in">
+            <a
+              href="/rules"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Rules
+            </a>
+            <a
+              href="/about"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+            >
+              <Info className="w-3.5 h-3.5" />
+              About
+            </a>
+            <div className="h-6 w-px bg-white/20" />
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white/80 hidden sm:block">{currentPlayer.username}</span>
+              <span className="text-sm font-bold text-white/80">{currentPlayer.username}</span>
               <Image
                 src={getAvatarUrl(currentPlayer.odId)}
                 alt={currentPlayer.username}
@@ -303,12 +353,69 @@ export default function GamePage() {
                 className="w-10 h-10 rounded-full bg-black/30 ring-2 ring-white/20 shadow-lg"
               />
             </div>
+          </div>
+        )}
+
+        {/* Top Right Navigation - Mobile (Dropdown) */}
+        {currentPlayer && (
+          <div className="md:hidden absolute top-4 right-4 z-50 animate-bounce-in">
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-sm transition-all"
+            >
+              <Image
+                src={getAvatarUrl(currentPlayer.odId)}
+                alt={currentPlayer.username}
+                width={32}
+                height={32}
+                unoptimized
+                className="w-8 h-8 rounded-full bg-black/30 ring-2 ring-white/20"
+              />
+              {showMobileMenu ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+            
+            {showMobileMenu && (
+              <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-gray-900/95 backdrop-blur-sm border border-white/10 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="p-3 border-b border-white/10">
+                  <p className="text-sm font-bold text-white">{currentPlayer.username}</p>
+                  {currentPlayer.isAdmin && (
+                    <p className="text-xs text-yellow-400 flex items-center gap-1 mt-1">
+                      <Crown className="w-3 h-3" /> Host
+                    </p>
+                  )}
+                </div>
+                <div className="p-2">
+                  <a
+                    href="/rules"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white text-sm transition-colors"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Rules
+                  </a>
+                  <a
+                    href="/about"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white text-sm transition-colors"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <Info className="w-4 h-4" />
+                    About
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Start Game Button Below Profile (Desktop) */}
+        {currentPlayer && (
+          <div className="hidden md:block absolute top-20 right-4 md:top-24 md:right-8 z-50 animate-bounce-in">
             {isAdmin && !isGamePlaying && (
               <button
                 onClick={handleStartGame}
                 disabled={!canStart || isLoading}
                 className={cn(
-                  'hidden md:block relative overflow-hidden group',
+                  'relative overflow-hidden group',
                   'bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500',
                   'text-white font-bold py-2 px-5 rounded-xl shadow-lg hover:shadow-emerald-500/25',
                   'transform transition-all duration-200 active:scale-95',
@@ -524,9 +631,22 @@ export default function GamePage() {
         {/* Header */}
         <GameHeader game={game} currentPlayer={currentPlayer} />
         
-        {/* Admin End Game Button (Absolute Top Right) */}
-        {/* Game Menu (Top Right) */}
-        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-50">
+        {/* Game Menu with Rules and About Links (Top Right) */}
+        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-50 flex items-center gap-2">
+          <a
+            href="/rules"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Rules</span>
+          </a>
+          <a
+            href="/about"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+          >
+            <Info className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">About</span>
+          </a>
           <GameMenu
             isAdmin={!!isAdmin}
             onEndGame={handleEndGameClick}

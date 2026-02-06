@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Menu, X, Info, Power, LogOut } from 'lucide-react';
+import { Menu, X, Power, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { useSound } from '@/hooks/useSound';
 
 interface GameMenuProps {
@@ -51,27 +50,14 @@ export default function GameMenu({ isAdmin, onEndGame, onLeaveGame, gameFinished
     setIsOpen(false);
     onLeaveGame?.();
   };
-  
-  const handleLinkClick = () => {
-    play('button');
-    setIsOpen(false);
-  };
 
   const btnBase = "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-95";
 
   return (
     <div className="relative z-50" ref={menuRef}>
       {/* Desktop: inline buttons */}
-      <div className="hidden md:flex items-center gap-2">
-        <Link
-          href="/about"
-          onClick={() => play('button')}
-          className={cn(btnBase, "text-white/60 hover:text-white hover:bg-white/10")}
-        >
-          <Info className="w-4 h-4" />
-          <span>About</span>
-        </Link>
-
+      {(isAdmin || gameFinished) && (
+        <div className="hidden md:flex items-center gap-2">
         {gameFinished ? (
           <button
             onClick={handleLeaveGame}
@@ -89,10 +75,12 @@ export default function GameMenu({ isAdmin, onEndGame, onLeaveGame, gameFinished
             <span>End Game</span>
           </button>
         ) : null}
-      </div>
+        </div>
+      )}
 
       {/* Mobile: dropdown menu */}
-      <div className="md:hidden">
+      {(isAdmin || gameFinished) && (
+        <div className="md:hidden">
         <button
           onClick={toggleMenu}
           className={cn(
@@ -107,42 +95,28 @@ export default function GameMenu({ isAdmin, onEndGame, onLeaveGame, gameFinished
         {isOpen && (
           <div className="absolute right-0 top-full mt-2 w-48 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2 origin-top-right">
             <div className="flex flex-col gap-1">
-              <Link 
-                href="/about" 
-                onClick={handleLinkClick}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-sm"
-              >
-                <Info className="w-4 h-4" />
-                <span>About</span>
-              </Link>
-
               {gameFinished ? (
-                <>
-                  <div className="h-px bg-white/10 my-1 mx-2" />
-                  <button
-                    onClick={handleLeaveGame}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full text-left text-sm font-medium"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Leave Game</span>
-                  </button>
-                </>
+                <button
+                  onClick={handleLeaveGame}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full text-left text-sm font-medium"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Leave Game</span>
+                </button>
               ) : isAdmin ? (
-                <>
-                  <div className="h-px bg-white/10 my-1 mx-2" />
-                  <button
-                    onClick={handleEndGame}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full text-left text-sm font-medium"
-                  >
-                    <Power className="w-4 h-4" />
-                    <span>End Game</span>
-                  </button>
-                </>
+                <button
+                  onClick={handleEndGame}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full text-left text-sm font-medium"
+                >
+                  <Power className="w-4 h-4" />
+                  <span>End Game</span>
+                </button>
               ) : null}
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

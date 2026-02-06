@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useGameStore } from '@/store/gameStore';
 import { cn } from '@/lib/utils';
-import { Plus, Users, Gamepad2, Sparkles, Loader2, ArrowRight, ArrowLeft, Info } from 'lucide-react';
+import { Plus, Users, Gamepad2, Sparkles, Loader2, ArrowRight, ArrowLeft, Info, BookOpen } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -77,6 +77,23 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-4">
       {/* Floating decorations removed for cleaner look, body background handles the gamey grid */ }
 
+      {/* Top Navigation Links */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-3 animate-bounce-in">
+        <Link
+          href="/rules"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          Rules
+        </Link>
+        <Link
+          href="/about"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+        >
+          <Info className="w-3.5 h-3.5" />
+          About
+        </Link>
+      </div>
       
       <div className="relative w-full max-w-md">
         {/* Logo/Title */}
@@ -313,17 +330,10 @@ export default function Home() {
         </div>
         
         {/* Footer */}
-        <div className="text-center mt-6 space-y-3">
+        <div className="text-center mt-6">
           <p className="text-white/30 text-sm">
             2-4 players • Real-time multiplayer
           </p>
-          <Link
-            href="/about"
-            className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/80 text-sm font-medium transition-colors"
-          >
-            <Info className="w-3.5 h-3.5" />
-            About &amp; Credits
-          </Link>
         </div>
       </div>
     </div>

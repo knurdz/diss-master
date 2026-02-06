@@ -6,6 +6,24 @@ import Link from 'next/link';
 export default function AboutPage() {
   return (
     <div className="min-h-screen animated-bg flex flex-col p-4 md:p-8 text-white">
+      {/* Top Navigation Links */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+        <Link
+          href="/rules"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          Rules
+        </Link>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/10 hover:border-white/20 backdrop-blur-sm"
+        >
+          <Gamepad2 className="w-3.5 h-3.5" />
+          Home
+        </Link>
+      </div>
+
       <Link href="/" className="inline-flex items-center gap-2 text-white/50 hover:text-white mb-8 transition-colors">
         <ArrowLeft className="w-4 h-4" />
         Back to Home
