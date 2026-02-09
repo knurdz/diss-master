@@ -57,6 +57,10 @@ interface GameStore extends GameState {
 
   // Admin End Game
   endGame: () => Promise<void>;
+
+  // Session recovery
+  getSavedUsername: (gameId: string) => string | null;
+  tryAutoReconnect: (gameId: string) => Promise<boolean>;
 }
 
 const initialState: GameState & { pendingTentativeUpdate: boolean } = {
@@ -68,18 +72,38 @@ const initialState: GameState & { pendingTentativeUpdate: boolean } = {
   pendingTentativeUpdate: false,
 };
 
-// Helper functions for per-game session persistence
+// Session persistence types and helpers
+interface PlayerSessionData {
+  playerId: string;
+  username: string;
+  gameCode: string;
+  savedAt: number;
+}
+
 const getSessionKey = (gameId: string) => `diss-master-session-${gameId}`;
 
-const savePlayerSession = (gameId: string, playerId: string) => {
+const savePlayerSession = (gameId: string, data: PlayerSessionData) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(getSessionKey(gameId), playerId);
+    localStorage.setItem(getSessionKey(gameId), JSON.stringify(data));
+    localStorage.setItem('diss-master-last-username', data.username);
   }
 };
 
-const getPlayerSession = (gameId: string): string | null => {
+const getPlayerSessionData = (gameId: string): PlayerSessionData | null => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem(getSessionKey(gameId));
+    const raw = localStorage.getItem(getSessionKey(gameId));
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      // Handle legacy format (plain playerId string)
+      if (typeof parsed === 'string') {
+        return { playerId: parsed, username: '', gameCode: '', savedAt: Date.now() };
+      }
+      return parsed as PlayerSessionData;
+    } catch {
+      // Legacy format: plain string playerId
+      return { playerId: raw, username: '', gameCode: '', savedAt: Date.now() };
+    }
   }
   return null;
 };
@@ -88,6 +112,29 @@ const clearPlayerSession = (gameId: string) => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(getSessionKey(gameId));
   }
+};
+
+const cleanupStaleSessions = () => {
+  if (typeof window === 'undefined') return;
+  const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+  const now = Date.now();
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('diss-master-session-')) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const data = JSON.parse(raw);
+        if (data.savedAt && now - data.savedAt > maxAge) {
+          keysToRemove.push(key);
+        }
+      } catch {
+        keysToRemove.push(key!);
+      }
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 };
 
 export const useGameStore = create<GameStore>()(
@@ -126,7 +173,12 @@ export const useGameStore = create<GameStore>()(
           });
 
           // Save session for this game
-          savePlayerSession(game.$id, player.$id);
+          savePlayerSession(game.$id, {
+            playerId: player.$id,
+            username,
+            gameCode: game.code,
+            savedAt: Date.now(),
+          });
 
           return { gameId: game.$id, code: game.code };
         } catch (error) {
@@ -150,6 +202,72 @@ export const useGameStore = create<GameStore>()(
           }
 
           const existingPlayers = await getGamePlayers(game.$id);
+
+          // Try to reconnect using saved session
+          const savedSession = getPlayerSessionData(game.$id);
+          if (savedSession) {
+            // Check if saved player is in the fetched players list
+            const existingPlayer = existingPlayers.find(p => p.$id === savedSession.playerId);
+            if (existingPlayer) {
+              // Reconnect to existing player, update username if changed
+              let reconnectedPlayer = existingPlayer;
+              if (existingPlayer.username !== username) {
+                reconnectedPlayer = await updatePlayer(existingPlayer.$id, { username });
+              }
+
+              savePlayerSession(game.$id, {
+                playerId: reconnectedPlayer.$id,
+                username,
+                gameCode: game.code,
+                savedAt: Date.now(),
+              });
+
+              set({
+                game,
+                currentPlayer: reconnectedPlayer,
+                players: existingPlayers.map(p =>
+                  p.$id === reconnectedPlayer.$id ? reconnectedPlayer : p
+                ),
+                isLoading: false,
+              });
+
+              return { gameId: game.$id };
+            }
+
+            // Player not in list - try direct fetch (handles stale player list)
+            try {
+              const directPlayer = await getPlayer(savedSession.playerId);
+              if (directPlayer && directPlayer.gameId === game.$id) {
+                let reconnectedPlayer = directPlayer;
+                if (directPlayer.username !== username) {
+                  reconnectedPlayer = await updatePlayer(directPlayer.$id, { username });
+                }
+
+                savePlayerSession(game.$id, {
+                  playerId: reconnectedPlayer.$id,
+                  username,
+                  gameCode: game.code,
+                  savedAt: Date.now(),
+                });
+
+                set({
+                  game,
+                  currentPlayer: reconnectedPlayer,
+                  players: [...existingPlayers, reconnectedPlayer],
+                  isLoading: false,
+                });
+
+                return { gameId: game.$id };
+              }
+            } catch {
+              // Player truly doesn't exist anymore
+            }
+
+            // Session is stale, clear it
+            clearPlayerSession(game.$id);
+          }
+
+          // No valid session found - check capacity before creating new player
           if (existingPlayers.length >= 4) {
             throw new Error('Game is full');
           }
@@ -165,7 +283,12 @@ export const useGameStore = create<GameStore>()(
           });
 
           // Save session for this game
-          savePlayerSession(game.$id, player.$id);
+          savePlayerSession(game.$id, {
+            playerId: player.$id,
+            username,
+            gameCode: game.code,
+            savedAt: Date.now(),
+          });
 
           return { gameId: game.$id };
         } catch (error) {
@@ -177,6 +300,9 @@ export const useGameStore = create<GameStore>()(
 
       loadGame: async (gameId) => {
         set({ isLoading: true, error: null });
+        // Clean up expired sessions on load
+        cleanupStaleSessions();
+
         try {
           const game = await getGame(gameId);
           if (!game) {
@@ -186,22 +312,38 @@ export const useGameStore = create<GameStore>()(
           const players = await getGamePlayers(gameId);
 
           // Try to restore player session from localStorage
-          let foundPlayer = null;
-          const savedPlayerId = getPlayerSession(gameId);
+          let foundPlayer: Player | null = null;
+          const savedSession = getPlayerSessionData(gameId);
 
-          if (savedPlayerId) {
-            foundPlayer = players.find(p => p.$id === savedPlayerId);
+          if (savedSession) {
+            // First check in the fetched players list
+            foundPlayer = players.find(p => p.$id === savedSession.playerId) || null;
+
             if (!foundPlayer) {
-              // Player was deleted or not found, clear stale session
-              clearPlayerSession(gameId);
+              // Not found in list - try fetching directly (handles stale list / network hiccup)
+              try {
+                const directPlayer = await getPlayer(savedSession.playerId);
+                if (directPlayer && directPlayer.gameId === gameId) {
+                  foundPlayer = directPlayer;
+                  // Add to players list if missing
+                  if (!players.find(p => p.$id === directPlayer.$id)) {
+                    players.push(directPlayer);
+                  }
+                }
+              } catch {
+                // Player truly doesn't exist in DB
+              }
             }
+
+            // Don't clear session here even if player not found.
+            // The auto-reconnect / joinGame flow will handle cleanup.
           }
 
           // Fallback: check current player in Zustand state
           if (!foundPlayer) {
             const { currentPlayer } = get();
             if (currentPlayer) {
-              foundPlayer = players.find(p => p.$id === currentPlayer.$id);
+              foundPlayer = players.find(p => p.$id === currentPlayer.$id) || null;
             }
           }
 
@@ -226,17 +368,26 @@ export const useGameStore = create<GameStore>()(
 
           const players = await getGamePlayers(gameId);
 
-          // Check if current player exists in this game
           const { currentPlayer } = get();
           let foundPlayer = currentPlayer;
 
           if (currentPlayer) {
-            foundPlayer = players.find(p => p.$id === currentPlayer.$id) || null;
+            const matched = players.find(p => p.$id === currentPlayer.$id);
+            if (matched) {
+              foundPlayer = matched;
+            } else if (players.length === 0 && game.status !== 'waiting') {
+              // Empty player list on an active game likely means transient network issue
+              // Keep current player to avoid accidental logout
+              foundPlayer = currentPlayer;
+            } else {
+              foundPlayer = null;
+            }
           }
 
           set({
             game,
-            players,
+            // Keep existing players if new list is empty on an active game (transient error)
+            players: players.length > 0 ? players : (game.status !== 'waiting' ? get().players : players),
             currentPlayer: foundPlayer,
           });
         } catch {
@@ -535,6 +686,31 @@ export const useGameStore = create<GameStore>()(
           const message = error instanceof Error ? error.message : 'Failed to end game';
           set({ error: message, isLoading: false });
           throw error;
+        }
+      },
+
+      getSavedUsername: (gameId: string) => {
+        const session = getPlayerSessionData(gameId);
+        if (session?.username) return session.username;
+        if (typeof window !== 'undefined') {
+          return localStorage.getItem('diss-master-last-username');
+        }
+        return null;
+      },
+
+      tryAutoReconnect: async (gameId: string) => {
+        const savedSession = getPlayerSessionData(gameId);
+        if (!savedSession?.username) return false;
+
+        const { game } = get();
+        if (!game) return false;
+        if (game.status === 'finished') return false;
+
+        try {
+          await get().joinGame(game.code, savedSession.username);
+          return true;
+        } catch {
+          return false;
         }
       },
 

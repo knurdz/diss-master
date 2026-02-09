@@ -74,7 +74,7 @@ export default function Home() {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4">
+    <div className="min-h-screen flex items-start md:items-center justify-center p-3 sm:p-4 pt-44 md:pt-4">
       {/* Floating decorations removed for cleaner look, body background handles the gamey grid */ }
 
       {/* Top Navigation Links */}
@@ -223,8 +223,11 @@ export default function Home() {
                            type="number"
                            min={1}
                            max={10}
-                           value={maxMeanings}
-                           onChange={(e) => setMaxMeanings(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                           value={maxMeanings === 0 ? '' : maxMeanings}
+                           onChange={(e) => {
+                             const val = e.target.value === '' ? 0 : parseInt(e.target.value);
+                             setMaxMeanings(val > 10 ? 10 : val);
+                           }}
                            aria-label="Max checks per player"
                            className="clue-input w-full"
                          />

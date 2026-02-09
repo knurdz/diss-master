@@ -71,9 +71,11 @@ export default function GameTile({
     }
   };
   
+  const isLongWord = word.length > 10;
+  
   return (
     <div 
-      className="relative aspect-[16/10] group"
+      className="relative aspect-[4/3] md:aspect-[16/10] group"
       style={{ perspective: '1000px' }}
     >
       {/* Flip Container */}
@@ -93,7 +95,7 @@ export default function GameTile({
           disabled={revealed || !canSelect}
           className={cn(
             'absolute inset-0 w-full h-full flex flex-col overflow-hidden rounded-md transition-all duration-200 backface-hidden',
-            'shadow-md hover:shadow-lg active:scale-95',
+            'shadow-sm md:shadow-md hover:shadow-lg active:scale-95',
             
             // --- Spymaster View (Unrevealed) ---
             !revealed && isSpymaster && color === 'blue' && 'bg-[#0CAADC]',
@@ -105,8 +107,8 @@ export default function GameTile({
             !revealed && !isSpymaster && 'bg-[#F2D7B6] hover:bg-[#FFE4c4]',
             
             // Interactive Borders/Rings
-            isTentativeSelf && !revealed && 'ring-4 ring-green-500 z-10',
-            !isTentativeSelf && hasTentativeOthers && !revealed && 'ring-2 ring-white/50 ring-dashed z-10',
+            isTentativeSelf && !revealed && 'ring-2 md:ring-4 ring-green-500 z-10',
+            !isTentativeSelf && hasTentativeOthers && !revealed && 'ring-1 md:ring-2 ring-white/50 ring-dashed z-10',
             
             // Hide when revealed (flipped)
             revealed && 'invisible'
@@ -114,10 +116,19 @@ export default function GameTile({
           style={{ backfaceVisibility: 'hidden' }}
         >
           {/* Main Content Area */}
-          <div className="flex-1 w-full flex items-center justify-center relative overflow-hidden">
+          <div className="flex-1 w-full flex items-center justify-center relative overflow-hidden p-0.5 md:p-1">
               {/* Word Text */}
               <span className={cn(
-                "relative z-10 font-black text-[10px] xs:text-xs sm:text-base md:text-lg uppercase tracking-wider px-0.5 text-center leading-tight",
+                "relative z-10 font-black uppercase tracking-wider text-center leading-none transition-all w-full",
+                
+                // Break-all for all devices
+                "break-all hyphens-auto",
+                
+                // Dynamic sizing based on word length
+                // Smaller sizes for tablet range (768-1200px)
+                isLongWord 
+                  ? "text-[9px] xs:text-[10px] sm:text-xs md:text-[10px] lg:text-xs xl:text-sm whitespace-normal leading-tight" 
+                  : "text-[10px] xs:text-xs sm:text-sm md:text-xs lg:text-sm xl:text-base",
                 
                 // Text Colors
                 isSpymaster && color !== 'neutral' ? 'text-white' : 'text-[#5C4033]',
@@ -131,15 +142,15 @@ export default function GameTile({
 
                {/* Spymaster indicator for unrevealed tiles */}
                {isSpymaster && !revealed && (
-                  <div className="absolute top-1 right-1 opacity-40">
-                     {color === 'black' && <Skull className="w-3 h-3 text-white" />}
+                  <div className="absolute top-0.5 right-0.5 md:top-1 md:right-1 opacity-40">
+                     {color === 'black' && <Skull className="w-2 h-2 md:w-3 md:h-3 text-white" />}
                   </div>
                )}
           </div>
 
-          {/* Bottom Bar (Darker Shade) */}
+          {/* Bottom Bar - Hidden on Mobile to save space, visible on MD */}
           <div className={cn(
-            "w-full h-3 sm:h-4",
+            "w-full hidden md:block md:h-3 lg:h-4",
             
             // --- Spymaster Bottom Bar ---
             isSpymaster && color === 'blue' && 'bg-[#008CB8]',
@@ -153,10 +164,10 @@ export default function GameTile({
 
           {/* Tentative Indicators overlay */}
           {hasTentativeOthers && (
-               <div className="absolute top-1 left-1 flex gap-1 z-20">
+               <div className="absolute top-0.5 left-0.5 flex gap-0.5 md:gap-1 z-20">
                  {tentativeOthers.map((pid) => (
-                   <div key={pid} className="bg-black/40 p-1 rounded-full border border-white/20">
-                     <MousePointer2 className="w-3 h-3 text-white" />
+                   <div key={pid} className="bg-black/40 p-0.5 md:p-1 rounded-full border border-white/20">
+                     <MousePointer2 className="w-2 h-2 md:w-3 md:h-3 text-white" />
                    </div>
                  ))}
                </div>
@@ -165,7 +176,7 @@ export default function GameTile({
 
         {/* Back Face (Image) */}
         <div 
-          className="absolute inset-0 w-full h-full rounded-md overflow-hidden shadow-md backface-hidden"
+          className="absolute inset-0 w-full h-full rounded-md overflow-hidden shadow-md backface-hidden bg-gray-900"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)'

@@ -51,9 +51,12 @@ export default function GamePage() {
     subscribeToUpdates,
     setError,
     leaveGame,
+    getSavedUsername,
+    tryAutoReconnect,
   } = useGameStore();
 
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [username, setUsername] = useState('');
   const { joinGame } = useGameStore();
   
@@ -89,12 +92,29 @@ export default function GamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.status, refreshGame]);
   
-  // Check if player needs to join
+  // Check if player needs to join - try auto-reconnect first
   useEffect(() => {
-    if (game && !currentPlayer && !showUsernamePrompt) {
-      setShowUsernamePrompt(true);
+    if (game && !currentPlayer && !showUsernamePrompt && !isReconnecting && !isLoading) {
+      const attemptReconnect = async () => {
+        setIsReconnecting(true);
+        try {
+          const reconnected = await tryAutoReconnect(gameId);
+          if (!reconnected) {
+            // Pre-fill username from saved session
+            const savedName = getSavedUsername(gameId);
+            if (savedName) setUsername(savedName);
+            setShowUsernamePrompt(true);
+          }
+        } catch {
+          setShowUsernamePrompt(true);
+        } finally {
+          setIsReconnecting(false);
+        }
+      };
+      attemptReconnect();
     }
-  }, [game, currentPlayer, showUsernamePrompt]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.$id, currentPlayer, showUsernamePrompt, isReconnecting, isLoading]);
   
   const handleJoinAsPlayer = async () => {
     if (!username.trim() || !game) return;
@@ -196,7 +216,7 @@ export default function GamePage() {
   const { canStart, error: startError } = canStartGame(players);
   
   // Loading state
-  if (!game) {
+  if (!game || isReconnecting) {
     return (
       <div className="min-h-screen animated-bg flex items-center justify-center">        {/* Top Navigation Links */}
         <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
@@ -217,7 +237,7 @@ export default function GamePage() {
         </div>
         <div className="text-center animate-bounce-in">
           <Gamepad2 className="w-16 h-16 mx-auto mb-4 text-blue-400 animate-float" />
-          <p className="text-white/70 text-lg">Loading game...</p>
+          <p className="text-white/70 text-lg">{isReconnecting ? 'Reconnecting...' : 'Loading game...'}</p>
         </div>
       </div>
     );
@@ -669,10 +689,10 @@ export default function GamePage() {
         />
         
         {/* Game Layout Grid */}
-        <div className="flex-1 flex flex-col md:flex-row items-center md:items-start justify-center gap-6 lg:gap-12 min-h-0">
+        <div className="flex-1 flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 lg:gap-6 xl:gap-12 min-h-0">
           
-          {/* Left Panel - Blue Team (Hidden on mobile) */}
-          <div className="hidden md:flex w-64 flex-shrink-0 flex-col justify-start pt-4 order-1">
+          {/* Left Panel - Blue Team (Hidden below lg) */}
+          <div className="hidden lg:flex w-48 xl:w-56 2xl:w-64 flex-shrink-0 flex-col justify-start pt-4 order-1">
              <TeamPanel 
                team="blue" 
                players={players} 
@@ -684,7 +704,7 @@ export default function GamePage() {
           </div>
           
           {/* Center - Game Board */}
-          <div className="flex-1 w-full max-w-3xl flex flex-col justify-center order-1 md:order-2 min-h-0">
+          <div className="flex-1 w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl flex flex-col justify-center order-1 lg:order-2 min-h-0">
             <GameBoard
               tiles={tiles}
               game={game}
@@ -694,14 +714,34 @@ export default function GamePage() {
               onToggleTentative={handleToggleTentative}
             />
             
-            {/* Game Log (Mobile Only) */}
-            <div className="md:hidden mt-6 w-full">
+            {/* Game Log & Team Panels (Below lg) */}
+            <div className="lg:hidden mt-6 w-full space-y-6">
               <GameLogPanel logs={game.logs || []} />
+
+              {/* Mobile/Tablet Team Panels */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <TeamPanel 
+                  team="blue" 
+                  players={players} 
+                  currentPlayer={currentPlayer}
+                  game={game}
+                  score={blueScore}
+                  targetScore={blueTarget}
+                />
+                <TeamPanel 
+                  team="red" 
+                  players={players} 
+                  currentPlayer={currentPlayer}
+                  game={game}
+                  score={redScore}
+                  targetScore={redTarget}
+                />
+              </div>
             </div>
           </div>
           
-          {/* Right Panel - Red Team (Hidden on mobile) */}
-          <div className="hidden md:flex w-64 flex-shrink-0 flex-col justify-start pt-4 order-3 gap-4">
+          {/* Right Panel - Red Team (Hidden below lg) */}
+          <div className="hidden lg:flex w-48 xl:w-56 2xl:w-64 flex-shrink-0 flex-col justify-start pt-4 order-3 gap-4">
              <TeamPanel 
                team="red" 
                players={players} 

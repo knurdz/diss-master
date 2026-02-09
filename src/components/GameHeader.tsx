@@ -45,9 +45,9 @@ export default function GameHeader({ game, currentPlayer }: GameHeaderProps) {
   }
 
   return (
-    <div className="text-center mb-4 sm:mb-8 relative z-10">
+    <div className="text-center mb-4 sm:mb-8 relative z-10 md:mt-10">
       {/* Mobile Score Bar */}
-      <div className="flex md:hidden items-center justify-center gap-4 mb-3">
+      <div className="flex md:hidden items-center justify-center gap-4 mb-3 mt-12">
         <div className="flex items-center gap-2 px-4 py-2 bg-blue-900/40 rounded-xl border border-blue-500/30">
           <span className="text-blue-400 font-bold text-lg">{blueScore}</span>
           <span className="text-white/40 text-sm">/ {blueTarget}</span>

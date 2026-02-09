@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { LogEntry } from '@/types/game';
 import { cn } from '@/lib/utils';
-import { ScrollText, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import Image from 'next/image';
 function getAvatarUrl(seed: string) {
   return `https://api.dicebear.com/9.x/adventurer/svg?seed=${seed}`;
@@ -13,6 +14,7 @@ interface GameLogPanelProps {
 }
 
 export default function GameLogPanel({ logs = [] }: GameLogPanelProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Helper to get initials (kept for fallback if needed, but unused generally)
   const getInitials = (name: string) => name ? name.substring(0, 2).toUpperCase() : '??';
@@ -50,17 +52,27 @@ export default function GameLogPanel({ logs = [] }: GameLogPanelProps) {
   }, []);
 
   return (
-    <div className="game-card flex flex-col max-h-96 bg-[#4a5568] backdrop-blur-sm border-2 border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-      {/* Header */}
-      <div className="bg-black/20 p-3 flex items-center justify-between cursor-default border-b border-white/5">
+    <div className={cn(
+      "game-card flex flex-col bg-[#4a5568] backdrop-blur-sm border-2 border-white/10 rounded-xl overflow-hidden shadow-2xl transition-all duration-300",
+      isCollapsed ? "max-h-14" : "max-h-96"
+    )}>
+      {/* Header - Clickable to toggle */}
+      <button 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="bg-black/20 p-3 flex items-center justify-between cursor-pointer border-b border-white/5 hover:bg-black/30 transition-colors"
+      >
         <div className="flex-1 text-center">
            <h3 className="text-xl font-bold tracking-widest text-white/90 uppercase">
              GAME LOG
            </h3>
         </div>
-        <ScrollText className="w-5 h-5 text-white/30" />
-      </div>
+        <ChevronDown className={cn(
+          "w-5 h-5 text-white/50 transition-transform duration-300",
+          isCollapsed ? "rotate-180" : "rotate-0"
+        )} />
+      </button>
       
+      {!isCollapsed && (
       <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar p-3 space-y-3">
         {logs.length === 0 ? (
             <div className="text-white/30 text-center py-8 text-sm italic">
@@ -183,6 +195,7 @@ export default function GameLogPanel({ logs = [] }: GameLogPanelProps) {
             </div>
         )}
       </div>
+      )}
     </div>
   );
 }

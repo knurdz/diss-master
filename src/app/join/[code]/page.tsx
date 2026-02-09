@@ -16,6 +16,14 @@ export default function JoinPage() {
   const [error, setError] = useState<string | null>(null);
   
   const { joinGame } = useGameStore();
+
+  // Pre-fill username from last session
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const lastUsername = localStorage.getItem('diss-master-last-username');
+      if (lastUsername) setUsername(lastUsername);
+    }
+  }, []);
   
   const handleJoinGame = async () => {
     if (!username.trim()) {

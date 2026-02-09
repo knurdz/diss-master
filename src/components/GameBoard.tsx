@@ -41,9 +41,9 @@ export default function GameBoard({
   }, [tiles, isSpymaster, game.$id]);
   
   return (
-    <div className="game-card p-3 md:p-4 bg-opacity-90">
+    <div className="game-card p-1 md:p-4 bg-opacity-90">
       {/* Tile Grid */}
-      <div className="grid grid-cols-5 gap-2 md:gap-3">
+      <div className="grid grid-cols-5 gap-1 md:gap-3">
         {displayTiles.map((tile, index) => (
           <div 
             key={tile.id} 

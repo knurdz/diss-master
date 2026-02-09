@@ -28,7 +28,7 @@ export default function TeamPanel({ team, players, game, currentPlayer, score, t
   
   return (
     <div className={cn(
-      'w-full rounded-3xl p-4 flex flex-col relative overflow-hidden transition-all duration-300',
+      'w-full rounded-xl p-4 flex flex-col relative overflow-hidden transition-all duration-300',
       isBlue ? 'bg-gradient-to-br from-blue-900/80 to-blue-950/90 border-blue-500/30' : 'bg-gradient-to-br from-red-900/80 to-red-950/90 border-red-500/30',
       'border-2 shadow-xl backdrop-blur-sm',
       isCurrentTurn && (isBlue ? 'shadow-blue-500/20 ring-2 ring-blue-400/50' : 'shadow-red-500/20 ring-2 ring-red-400/50')
