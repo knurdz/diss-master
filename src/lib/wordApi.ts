@@ -121,8 +121,9 @@ function isTooSimilar(a: string, b: string): boolean {
 
 // Check if a word is too similar to any word already in the set
 function isTooSimilarToSet(word: string, existing: Set<string>): boolean {
-  for (const w of existing) {
-    if (isTooSimilar(word, w)) return true;
+  const arr = Array.from(existing);
+  for (let i = 0; i < arr.length; i++) {
+    if (isTooSimilar(word, arr[i])) return true;
   }
   return false;
 }
