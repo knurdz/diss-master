@@ -101,6 +101,32 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+// Check if two words are too similar (shared root / one contains the other)
+function isTooSimilar(a: string, b: string): boolean {
+  const la = a.toUpperCase();
+  const lb = b.toUpperCase();
+  if (la === lb) return true;
+  // One contains the other (e.g. THUNDER / THUNDERSTORM)
+  if (la.includes(lb) || lb.includes(la)) return true;
+  // Share a long common prefix (e.g. EXPLODE / EXPLOSION → "EXPLO")
+  const minLen = Math.min(la.length, lb.length);
+  let shared = 0;
+  for (let i = 0; i < minLen; i++) {
+    if (la[i] === lb[i]) shared++;
+    else break;
+  }
+  if (shared >= 4 && shared >= minLen - 2) return true;
+  return false;
+}
+
+// Check if a word is too similar to any word already in the set
+function isTooSimilarToSet(word: string, existing: Set<string>): boolean {
+  for (const w of existing) {
+    if (isTooSimilar(word, w)) return true;
+  }
+  return false;
+}
+
 // Main function to generate 25 unique words for a game
 // Strategy: Build thematic clusters of related words so spymasters
 // can create interesting clue connections.
@@ -140,12 +166,12 @@ export async function generateGameWords(): Promise<string[]> {
   ];
 
   try {
-    // Pick 5–7 diverse themes at random
-    const themes = shuffleArray(THEME_SEEDS).slice(0, 6);
+    // Pick 8 diverse themes but only take 2-3 words each → spread, not clustered
+    const themes = shuffleArray(THEME_SEEDS).slice(0, 8);
 
     // Fetch related words in parallel for speed
     const clusterPromises = themes.map(seed =>
-      fetchRelatedWords(seed, 8).then(words => ({
+      fetchRelatedWords(seed, 6).then(words => ({
         seed: seed.toUpperCase(),
         words,
       }))
@@ -153,22 +179,24 @@ export async function generateGameWords(): Promise<string[]> {
 
     const clusters = await Promise.all(clusterPromises);
 
-    // Add the seed word itself + its related words
+    // Take the seed + only 2–3 related words per theme to avoid too-similar boards
     for (const cluster of clusters) {
       if (isValidWord(cluster.seed)) {
         allWords.add(cluster.seed);
       }
-      for (const w of cluster.words) {
-        allWords.add(w);
-        if (allWords.size >= 35) break; // collect extras for variety
-      }
+      // Pick 2-3 related words, filtering out near-duplicates
+      const picked = cluster.words
+        .filter(w => !isTooSimilar(w, cluster.seed) && !isTooSimilarToSet(w, allWords))
+        .slice(0, 3);
+      picked.forEach(w => allWords.add(w));
     }
 
-    // If we still don't have enough (API issues), pad with random words
-    if (allWords.size < 25) {
-      const needed = 25 - allWords.size + 5;
-      const randomWords = await fetchRandomWords(needed);
-      randomWords.forEach(w => allWords.add(w));
+    // Pad with random unrelated words to fill the rest (adds variety)
+    if (allWords.size < 28) {
+      const needed = 28 - allWords.size;
+      const randomWords = await fetchRandomWords(needed + 5);
+      const filtered = randomWords.filter(w => !isTooSimilarToSet(w, allWords));
+      filtered.forEach(w => allWords.add(w));
     }
 
     // Shuffle and return exactly 25

@@ -63,13 +63,14 @@ interface GameStore extends GameState {
   tryAutoReconnect: (gameId: string) => Promise<boolean>;
 }
 
-const initialState: GameState & { pendingTentativeUpdate: boolean } = {
+const initialState: GameState & { pendingTentativeUpdate: boolean; pendingGuessUpdate: boolean } = {
   game: null,
   players: [],
   currentPlayer: null,
   isLoading: false,
   error: null,
   pendingTentativeUpdate: false,
+  pendingGuessUpdate: false,
 };
 
 // Session persistence types and helpers
@@ -362,6 +363,9 @@ export const useGameStore = create<GameStore>()(
 
       // Silent refresh - doesn't show loading state (used for polling)
       refreshGameSilent: async (gameId) => {
+        // Skip refresh while a guess is being processed to avoid overwriting optimistic state
+        if ((get() as any).pendingGuessUpdate) return;
+
         try {
           const game = await getGame(gameId);
           if (!game) return;
@@ -514,54 +518,70 @@ export const useGameStore = create<GameStore>()(
           throw new Error('Not your turn to guess');
         }
 
-        set({ isLoading: true, error: null });
+        const tile = game.tiles.find(t => t.id === tileId);
+        if (!tile) throw new Error('Tile not found');
+
+        // Compute the result locally first
+        const result = processTileSelection(game, tileId, currentPlayer.team!);
+
+        // Clear tentative guesses for this tile since it's now revealed
+        const updatedTiles = result.tiles.map(t => {
+          if (t.id === tileId) {
+            return { ...t, tentativeBy: undefined };
+          }
+          return t;
+        });
+
+        const newLogEntry = {
+          id: ID.unique(),
+          timestamp: new Date().toISOString(),
+          type: 'guess' as const,
+          team: currentPlayer.team!,
+          playerName: currentPlayer.username,
+          playerOdId: currentPlayer.odId,
+          message: `guessed "${tile.word}"`,
+          metadata: {
+            tileWord: tile.word,
+            tileColor: tile.color,
+            isCorrect: tile.color === currentPlayer.team
+          }
+        } as LogEntry;
+
+        // Build the optimistic game state
+        const optimisticGame: Game = {
+          ...game,
+          tiles: updatedTiles,
+          guessesRemaining: result.guessesRemaining,
+          currentTurn: result.currentTurn,
+          currentPhase: result.currentPhase,
+          winner: result.winner,
+          blueScore: result.blueScore,
+          redScore: result.redScore,
+          currentClue: result.currentPhase === 'giving_clue' ? null : game.currentClue,
+          logs: [...(game.logs || []), newLogEntry],
+        };
+
+        // Apply optimistic update immediately so the UI reflects the result
+        set({ game: optimisticGame, isLoading: true, error: null, pendingGuessUpdate: true } as any);
+
         try {
-          const tile = game.tiles.find(t => t.id === tileId);
-          if (!tile) throw new Error('Tile not found');
-
-          const result = processTileSelection(game, tileId, currentPlayer.team!);
-
-          // Clear tentative guesses for this tile since it's now revealed
-          const updatedTiles = result.tiles.map(t => {
-            if (t.id === tileId) {
-              return { ...t, tentativeBy: undefined };
-            }
-            return t;
-          });
-
-          const updatedGame = await updateGame(game.$id, {
+          // Persist to server in background
+          const serverGame = await updateGame(game.$id, {
             tiles: updatedTiles,
             guessesRemaining: result.guessesRemaining,
             currentTurn: result.currentTurn,
-
             currentPhase: result.currentPhase,
             winner: result.winner,
             blueScore: result.blueScore,
             redScore: result.redScore,
             currentClue: result.currentPhase === 'giving_clue' ? null : game.currentClue,
-            logs: [
-              ...(game.logs || []),
-              {
-                id: ID.unique(),
-                timestamp: new Date().toISOString(),
-                type: 'guess',
-                team: currentPlayer.team!,
-                playerName: currentPlayer.username,
-                playerOdId: currentPlayer.odId,
-                message: `guessed "${tile.word}"`,
-                metadata: {
-                  tileWord: tile.word,
-                  tileColor: tile.color,
-                  isCorrect: tile.color === currentPlayer.team
-                }
-              } as LogEntry
-            ]
+            logs: optimisticGame.logs,
           });
 
-          set({ game: updatedGame, isLoading: false });
+          set({ game: serverGame, isLoading: false, pendingGuessUpdate: false } as any);
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to select tile';
-          set({ error: message, isLoading: false });
+          // On failure, revert to original game state
+          set({ game, isLoading: false, pendingGuessUpdate: false, error: error instanceof Error ? error.message : 'Failed to select tile' } as any);
           throw error;
         }
       },
@@ -719,7 +739,10 @@ export const useGameStore = create<GameStore>()(
         if (!game) return () => { };
 
         const unsubGame = subscribeToGame(game.$id, (updatedGame) => {
-          const { pendingTentativeUpdate, game: currentGame } = get() as any;
+          const { pendingTentativeUpdate, pendingGuessUpdate, game: currentGame } = get() as any;
+
+          // Skip subscription updates while a guess is being processed
+          if (pendingGuessUpdate) return;
 
           // If we have a pending tentative update, preserve the local tentative selections
           if (pendingTentativeUpdate && currentGame) {

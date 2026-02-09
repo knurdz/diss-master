@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { Tile } from '@/types/game';
 import { cn } from '@/lib/utils';
 import { Skull, CheckCircle2, MousePointer2, BookOpen } from 'lucide-react';
@@ -72,6 +73,16 @@ export default function GameTile({
   };
   
   const isLongWord = word.length > 10;
+
+  // Track whether this tile has already been flipped so we don't re-animate
+  const hasFlippedRef = useRef(revealed);
+  const justFlipped = revealed && !hasFlippedRef.current;
+
+  useEffect(() => {
+    if (revealed) {
+      hasFlippedRef.current = true;
+    }
+  }, [revealed]);
   
   return (
     <div 
@@ -81,8 +92,9 @@ export default function GameTile({
       {/* Flip Container */}
       <div 
         className={cn(
-          "relative w-full h-full transition-transform duration-500 ease-in-out",
-          revealed && "animate-flip"
+          "relative w-full h-full",
+          // Only animate the transition when the tile is first flipped
+          justFlipped && "transition-transform duration-500 ease-in-out"
         )}
         style={{ 
           transformStyle: 'preserve-3d',
