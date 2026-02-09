@@ -102,61 +102,113 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // Main function to generate 25 unique words for a game
+// Strategy: Build thematic clusters of related words so spymasters
+// can create interesting clue connections.
 export async function generateGameWords(): Promise<string[]> {
   const allWords: Set<string> = new Set();
-  
+
+  // Diverse theme seeds – pick a random subset each game so boards vary
+  const THEME_SEEDS = [
+    // Nature & Geography
+    'ocean', 'mountain', 'jungle', 'volcano', 'glacier', 'canyon', 'meadow',
+    // Space & Science
+    'planet', 'rocket', 'gravity', 'galaxy', 'telescope', 'satellite',
+    // Food & Kitchen
+    'chocolate', 'kitchen', 'spice', 'bakery', 'harvest', 'feast',
+    // War & Conflict
+    'sword', 'battle', 'siege', 'armor', 'cannon', 'fortress',
+    // Music & Art
+    'orchestra', 'canvas', 'melody', 'sculpture', 'theater', 'rhythm',
+    // Sports & Games
+    'stadium', 'marathon', 'trophy', 'champion', 'soccer', 'tournament',
+    // Animals
+    'predator', 'safari', 'swarm', 'herd', 'falcon', 'serpent',
+    // Technology
+    'circuit', 'software', 'antenna', 'engine', 'laser', 'signal',
+    // Fantasy & Myth
+    'dragon', 'wizard', 'phoenix', 'legend', 'quest', 'treasure',
+    // City & Travel
+    'harbor', 'airport', 'market', 'bridge', 'subway', 'carnival',
+    // Weather & Elements
+    'thunder', 'blizzard', 'tornado', 'flame', 'frost', 'shadow',
+    // Body & Health
+    'muscle', 'pulse', 'breath', 'skeleton', 'vision', 'reflex',
+    // Professions
+    'detective', 'surgeon', 'captain', 'architect', 'merchant', 'spy',
+    // Emotions & Abstract
+    'courage', 'mystery', 'revenge', 'silence', 'chaos', 'fortune',
+  ];
+
   try {
-    // Step 1: Get random seed words (get more than needed for variety)
-    const randomWords = await fetchRandomWords(15);
-    randomWords.forEach(w => allWords.add(w));
-    
-    // Step 2: Pick 3-4 random seed words to get related words
-    const seedWords = shuffleArray(randomWords).slice(0, 4);
-    
-    // Step 3: Fetch related words for each seed
-    for (const seed of seedWords) {
-      if (allWords.size >= 30) break; // Get a few extra in case of duplicates
-      
-      const related = await fetchRelatedWords(seed, 5);
-      related.forEach(w => allWords.add(w));
+    // Pick 5–7 diverse themes at random
+    const themes = shuffleArray(THEME_SEEDS).slice(0, 6);
+
+    // Fetch related words in parallel for speed
+    const clusterPromises = themes.map(seed =>
+      fetchRelatedWords(seed, 8).then(words => ({
+        seed: seed.toUpperCase(),
+        words,
+      }))
+    );
+
+    const clusters = await Promise.all(clusterPromises);
+
+    // Add the seed word itself + its related words
+    for (const cluster of clusters) {
+      if (isValidWord(cluster.seed)) {
+        allWords.add(cluster.seed);
+      }
+      for (const w of cluster.words) {
+        allWords.add(w);
+        if (allWords.size >= 35) break; // collect extras for variety
+      }
     }
-    
-    // Step 4: If we still don't have enough, fetch more random words
+
+    // If we still don't have enough (API issues), pad with random words
     if (allWords.size < 25) {
-      const moreRandom = await fetchRandomWords(25 - allWords.size + 5);
-      moreRandom.forEach(w => allWords.add(w));
+      const needed = 25 - allWords.size + 5;
+      const randomWords = await fetchRandomWords(needed);
+      randomWords.forEach(w => allWords.add(w));
     }
-    
-    // Step 5: Shuffle and return exactly 25 words
+
+    // Shuffle and return exactly 25
     const wordArray = shuffleArray(Array.from(allWords));
-    
+
     if (wordArray.length >= 25) {
       return wordArray.slice(0, 25);
     }
-    
-    // Fallback: if API failed, use backup words
+
+    // Fallback if API returned too few
     console.warn('Not enough words from API, using fallback');
     return getFallbackWords(25 - wordArray.length, wordArray);
-    
   } catch (error) {
     console.error('Error generating game words:', error);
-    // Return fallback words if API completely fails
     return getFallbackWords(25, []);
   }
 }
 
-// Fallback words in case API fails
+// Fallback words in case API fails – organized in thematic clusters
 const FALLBACK_WORDS = [
-  'OCEAN', 'RIVER', 'MOUNTAIN', 'FOREST', 'DESERT',
-  'CASTLE', 'BRIDGE', 'TOWER', 'GARDEN', 'TEMPLE',
-  'DRAGON', 'KNIGHT', 'WIZARD', 'PIRATE', 'NINJA',
-  'DIAMOND', 'SILVER', 'COPPER', 'CRYSTAL', 'PEARL',
-  'THUNDER', 'SHADOW', 'FLAME', 'FROST', 'STORM',
-  'ROCKET', 'PLANET', 'COMET', 'GALAXY', 'NEBULA',
-  'PHOENIX', 'SPHINX', 'GRIFFIN', 'UNICORN', 'HYDRA',
-  'ANCHOR', 'COMPASS', 'LANTERN', 'SCROLL', 'DAGGER',
-  'FALCON', 'PANTHER', 'SERPENT', 'DOLPHIN', 'BUFFALO',
-  'PALACE', 'HARBOR', 'VILLAGE', 'KINGDOM', 'EMPIRE',
+  // Nature
+  'OCEAN', 'RIVER', 'MOUNTAIN', 'FOREST', 'DESERT', 'GLACIER', 'VOLCANO', 'CANYON',
+  // Fantasy
+  'DRAGON', 'KNIGHT', 'WIZARD', 'PIRATE', 'PHOENIX', 'GRIFFIN', 'UNICORN', 'QUEST',
+  // Materials & Gems
+  'DIAMOND', 'SILVER', 'COPPER', 'CRYSTAL', 'PEARL', 'MARBLE', 'AMBER', 'RUBY',
+  // Weather & Elements
+  'THUNDER', 'SHADOW', 'FLAME', 'FROST', 'STORM', 'BLIZZARD', 'TORNADO', 'ECLIPSE',
+  // Space
+  'ROCKET', 'PLANET', 'COMET', 'GALAXY', 'NEBULA', 'ASTEROID', 'ORBIT', 'GRAVITY',
+  // War & Combat
+  'FORTRESS', 'CANNON', 'SHIELD', 'ARROW', 'SIEGE', 'ARMOR', 'SWORD', 'DAGGER',
+  // Animals
+  'FALCON', 'PANTHER', 'SERPENT', 'DOLPHIN', 'BUFFALO', 'SCORPION', 'JAGUAR', 'HAWK',
+  // Places
+  'PALACE', 'HARBOR', 'VILLAGE', 'KINGDOM', 'EMPIRE', 'TEMPLE', 'CASTLE', 'BRIDGE',
+  // Objects & Tools
+  'ANCHOR', 'COMPASS', 'LANTERN', 'SCROLL', 'TELESCOPE', 'WHISTLE', 'PENDULUM', 'LEVER',
+  // Music & Art
+  'SYMPHONY', 'CANVAS', 'RHYTHM', 'MELODY', 'TRUMPET', 'SCULPTURE', 'PORTRAIT', 'CHORUS',
 ];
 
 function getFallbackWords(count: number, existingWords: string[]): string[] {
